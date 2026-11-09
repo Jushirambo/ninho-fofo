@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ninho Fofo — filhotes no bosque (arquivo único)</title>
+<meta name="description" content="Jogo de lógica original com filhotes fofinhos. Acomode 49 bichinhos num ninho 7×7 sem repetir cor ou espécie.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='28' fill='%23ffe0ee'/><circle cx='50' cy='58' r='26' fill='%23ff8bb0'/><circle cx='50' cy='50' r='8' fill='%23fff'/></svg>">
+<style>
+:root {
+  --sky: #c8e8ff;
+  --grass: #b7e4a5;
+  --card: #fffdf8;
+  --ink: #3d3340;
+  --ink-soft: #7a6b7d;
+  --line: #f0d4e4;
+  --accent: #ff7eb3;
+  --accent-soft: #ffe0ee;
+  --danger: #e05b7a;
+  --shadow-sm: 0 2px 0 #f3c6d8, 0 6px 16px rgba(255, 126, 179, .18);
+  --shadow-md: 0 10px 0 rgba(255, 183, 213, .45), 0 18px 36px rgba(61, 51, 64, .12);
+  --radius: 22px;
+  --board-max: min(74vh, 640px, 92vw);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; min-height: 100%; }
+
+body {
+  background:
+    radial-gradient(circle at 12% 18%, #fff 0 7px, transparent 8px),
+    radial-gradient(circle at 78% 12%, #ffe9f4 0 12px, transparent 13px),
+    radial-gradient(circle at 90% 70%, #fff 0 6px, transparent 7px),
+    linear-gradient(180deg, #c8e8ff 0 38%, #d9f5c7 38% 100%);
+  color: var(--ink);
+  font-family: "Trebuchet MS", "Nunito", ui-rounded, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+h1, h2, h3 { margin: 0; font-weight: 800; }
+
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px clamp(12px, 3vw, 26px) 40px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand h1 {
+  font-size: clamp(26px, 5vw, 36px);
+  color: #ff5e9a;
+  letter-spacing: -.04em;
+  text-shadow: 2px 3px 0 #ffe0ee;
+}
+.brand h1::before { content: "🪺 "; font-size: .85em; }
+.brand .tag {
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #7a6b7d;
+  font-weight: 700;
+}
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn {
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: #fff;
+  border: 3px solid #ffd0e4;
+  box-shadow: 0 3px 0 #ffb7d5;
+  font-size: 13.5px;
+  font-weight: 800;
+  transition: transform .12s ease;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(1px); box-shadow: 0 1px 0 #ffb7d5; }
+.btn-primary { background: linear-gradient(#ff9ec4, #ff7eb3); border-color: #ff5e9a; color: #fff; box-shadow: 0 3px 0 #e05590; }
+.btn-ghost { background: transparent; box-shadow: none; border-color: transparent; }
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) 344px;
+  gap: clamp(16px, 2.4vw, 30px);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  :root { --board-max: min(88vw, 560px); }
+}
+
+.board-area { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.board-frame {
+  width: var(--board-max);
+  background: #fff7fb;
+  border: 6px solid #fff;
+  border-radius: 32px;
+  padding: clamp(8px, 1.4vw, 14px);
+  box-shadow: var(--shadow-md);
+}
+.board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  gap: 5px;
+  padding: 8px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.35), transparent 40%),
+    linear-gradient(135deg, #9ed98a, #c6eea8);
+}
+.cell {
+  position: relative;
+  border-radius: 50%;
+  background: rgba(255, 255, 240, .42);
+  border: 2px dashed rgba(90, 130, 70, .28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+  transition: background .15s ease, transform .12s ease;
+}
+.cell.filled {
+  border: 3px solid #fff;
+  background: #fffdf8;
+  cursor: default;
+  border-radius: 46%;
+  animation: pop .22s ease-out;
+  box-shadow: 0 3px 0 rgba(90, 130, 70, .18);
+}
+@keyframes pop {
+  from { transform: scale(.7); }
+  to { transform: scale(1); }
+}
+.cell.empty.legal {
+  background: #fff3a8;
+  border: 3px solid #ffb347;
+  cursor: pointer;
+}
+.cell.empty.legal:hover { transform: scale(1.06); background: #ffe27a; }
+.cell.conflict { box-shadow: inset 0 0 0 3px var(--danger); }
+.cell.ghost .animal-svg { opacity: .42; }
+.cell .animal-svg { width: 92%; height: 92%; display: block; }
+.cell.starter::after {
+  content: "★";
+  position: absolute;
+  top: 2px; right: 4px;
+  font-size: 9px;
+  color: #ff5e9a;
+  pointer-events: none;
+}
+.cell.hl-row, .cell.hl-col { background-color: rgba(255, 255, 255, .28); }
+
+.board-caption {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-weight: 700;
+}
+.board-caption b { color: var(--ink); }
+
+.sidebar { display: flex; flex-direction: column; gap: 14px; }
+.panel {
+  background: var(--card);
+  border: 3px solid #ffe0ee;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 14px;
+}
+.panel h2 {
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #c56b90;
+  margin-bottom: 10px;
+}
+
+.turn { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; }
+.badge {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--ink);
+  flex: 0 0 auto;
+  border: 2px solid #fff;
+}
+.badge.p1 { background: #ff6b8a; }
+.badge.p2 { background: #6db7ff; }
+.badge.p3 { background: #7ed957; }
+.badge.p4 { background: #c084fc; }
+.badge.p5 { background: #ffb347; }
+.turn small { display: block; font-weight: 600; font-size: 12.5px; color: var(--ink-soft); }
+
+.players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.players li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 16px;
+  background: #fff4fa;
+  font-size: 13.5px;
+}
+.players li.active { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+.players li.out { opacity: .55; }
+.players .p-name { font-weight: 800; margin-right: auto; }
+.players .p-meta { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
+.players .p-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  background: #fff;
+  border: 2px solid #ffe0ee;
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 12px;
+}
+
+.hand-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.hand-head h2 { margin: 0; }
+.hint { font-size: 12px; color: var(--ink-soft); }
+.hand { display: flex; gap: 8px; flex-wrap: wrap; min-height: 74px; align-items: center; }
+.hand-empty { font-size: 13px; color: var(--ink-soft); font-style: italic; }
+
+.tile {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 0 #f3c6d8;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .13s ease;
+}
+.tile .animal-svg { width: 100%; height: 100%; }
+.tile:not(.dead):hover { transform: translateY(-4px) rotate(-4deg); }
+.tile.selected {
+  transform: translateY(-6px) scale(1.08);
+  box-shadow: 0 0 0 4px #ff7eb3, 0 8px 0 #f3c6d8;
+}
+.tile.dead { opacity: .4; filter: grayscale(.5); cursor: not-allowed; }
+.tile .kbd {
+  position: absolute;
+  top: -4px; left: -4px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #ff5e9a;
+  color: #fff;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  border: 2px solid #fff;
+}
+
+.actions { display: flex; flex-direction: column; gap: 8px; }
+.draw-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.draw-slots .btn { width: 100%; padding: 10px; }
+
+.notice {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  background: #fff4fa;
+  border-left: 4px solid #ffd0e4;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.notice.warn { border-left-color: var(--danger); color: #8d302b; background: #ffe8ee; }
+.notice.good { border-left-color: #7ed957; color: #2d6a3a; background: #eefbe8; }
+
+.log {
+  list-style: none; margin: 0; padding: 0;
+  max-height: 178px; overflow-y: auto;
+  font-size: 12.5px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.log li { padding-left: 8px; border-left: 3px solid #ffd0e4; color: var(--ink-soft); }
+.log li.place { border-left-color: #7ed957; color: var(--ink); }
+.log li.out { border-left-color: var(--danger); }
+.log li.end { border-left-color: #ff5e9a; color: var(--ink); font-weight: 800; }
+
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(61, 51, 64, .4);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px; z-index: 50;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal {
+  background: #fffdf8;
+  border-radius: 28px;
+  box-shadow: var(--shadow-md);
+  max-width: 560px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 22px;
+  border: 5px solid #fff;
+  outline: 3px solid #ffd0e4;
+}
+.modal h2 { font-size: 24px; margin-bottom: 4px; color: #ff5e9a; }
+.modal .sub { color: var(--ink-soft); font-size: 13px; margin-bottom: 16px; }
+.field { margin-bottom: 12px; }
+.field label {
+  display: block; font-size: 12px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px; font-weight: 800;
+}
+select, input[type="text"] {
+  font: inherit; padding: 8px 10px; border-radius: 12px;
+  border: 3px solid #ffe0ee; background: #fff; color: var(--ink); width: 100%;
+}
+.seat-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 132px 116px;
+  gap: 8px; align-items: center; margin-bottom: 8px;
+}
+.seat-row .badge { width: 24px; height: 24px; font-size: 11.5px; }
+.seat-row select { padding: 6px 8px; font-size: 13px; }
+
+.rules { font-size: 13.5px; }
+.rules h3 { font-size: 14px; margin: 16px 0 6px; color: #ff5e9a; }
+.rules ul { margin: 0; padding-left: 18px; }
+.rules li { margin-bottom: 5px; color: var(--ink-soft); }
+.rules li b { color: var(--ink); }
+.rules .credit {
+  margin-top: 18px; padding-top: 12px;
+  border-top: 2px dashed #ffe0ee;
+  font-size: 12px; color: var(--ink-soft);
+}
+
+.ranking { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.ranking li {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 11px; border-radius: 16px; background: #fff4fa; font-size: 14px;
+}
+.ranking li.winner { background: #ffe0ee; box-shadow: inset 0 0 0 2px #ff7eb3; font-weight: 800; }
+.ranking .pos { font-variant-numeric: tabular-nums; color: var(--ink-soft); width: 18px; }
+.ranking .r-name { margin-right: auto; }
+.ranking .r-meta { font-size: 12px; color: var(--ink-soft); }
+
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 2px solid #fff; box-shadow: 0 1px 0 #f3c6d8; }
+
+footer.foot {
+  margin-top: 26px; padding-top: 14px;
+  font-size: 12px; color: var(--ink-soft); text-align: center; font-weight: 700;
+}
+footer.foot::before { content: "🐣  🐷  🦉  🩷  🦫  🦔  🦭"; display: block; margin-bottom: 8px; letter-spacing: .35em; font-size: 18px; }
+
+@media (max-width: 620px) {
+  .brand { align-items: flex-start; flex-direction: column; gap: 1px; }
+  .board { gap: 3px; padding: 4px; }
+  .cell { border-radius: 40%; }
+  .seat-row { grid-template-columns: 28px 1fr; }
+  .seat-row select { grid-column: 2; }
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <h1>Ninho Fofo</h1>
+      <span class="tag">filhotes · lógica · 1 a 5 jogadores</span>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="btn-rules" type="button">Regras</button>
+      <button class="btn" id="btn-setup" type="button">Nova partida</button>
+      <button class="btn btn-ghost" id="btn-sound" type="button" aria-pressed="true">Som: ligado</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="board-area" aria-label="Ninho">
+      <div class="board-frame">
+        <div class="board" id="board" role="grid" aria-label="Ninho 7 por 7"></div>
+        <svg id="svg-defs" width="0" height="0" aria-hidden="true" focusable="false"
+             style="position:absolute;width:0;height:0;overflow:hidden"></svg>
+      </div>
+      <div class="board-caption">
+        <span><b id="fill-count">1</b>/49 filhotes acomodados</span>
+        <span>Cestinha: <b id="bag-count">0</b></span>
+        <span>Sem repetir <b>cor</b> ou <b>espécie</b> na linha/coluna</span>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <aside class="sidebar">
+      <section class="panel">
+        <h2>Vez de jogar</h2>
+        <div class="turn" id="turn-line">
+          <span class="badge p1">1</span>
+          <span id="turn-name">—<small id="turn-sub">carregando…</small></span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Jogadores</h2>
+        <ul class="players" id="players"></ul>
+      </section>
+
+      <section class="panel">
+        <div class="hand-head">
+          <h2 style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#c56b90">Mão</h2>
+          <span class="hint" id="hand-hint">clique num filhote e depois numa toca</span>
+        </div>
+        <div class="hand" id="hand"></div>
+      </section>
+
+      <section class="panel actions" id="actions">
+        <div id="action-notice" class="notice">Escolha um filhote da mão.</div>
+        <div class="draw-slots" id="draw-slots" hidden>
+          <button class="btn btn-primary" id="btn-draw" type="button">Pegar filhote</button>
+          <button class="btn" id="btn-skip" type="button">Não pegar</button>
+        </div>
+        <button class="btn btn-ghost" id="btn-auto" type="button">Jogar automaticamente</button>
+      </section>
+
+      <section class="panel">
+        <h2>Histórico</h2>
+        <ul class="log" id="log"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    Ninho Fofo é um jogo independente: nome, textos e ilustrações vetoriais são originais deste projeto.
+  </footer>
+</div>
+
+<div class="modal-backdrop" id="modal-rules" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+    <h2 id="rules-title">Como jogar</h2>
+    <p class="sub">Ajude os filhotes a achar uma toca no ninho.</p>
+    <div class="rules">
+      <p>Há <b>49 filhotes</b>: cada um combina uma <b>espécie</b> (pintinho, porquinho, corujinha, axolote, capivara, ouriço, foca) e uma <b>pelagem</b> (7 cores). Juntos, eles cabem num ninho <b>7×7</b>.</p>
+      <ul>
+        <li><b>Começo:</b> um filhote já ocupa a primeira toca. Cada jogador recebe <b>4 filhotes</b>; o resto fica na cestinha.</li>
+        <li><b>Na sua vez:</b> acomode 1 filhote da mão numa toca vazia <b>vizinha</b> (por um lado) de outro filhote.</li>
+        <li><b>Restrição:</b> ele não pode ter a mesma <b>cor</b> nem a mesma <b>espécie</b> de outro filhote na mesma <b>linha</b> ou <b>coluna</b>.</li>
+        <li><b>Pegar ou não:</b> depois de acomodar, você pode pegar 1 filhote da cestinha. Se não pegar, seu limite de mão cai e <b>nunca mais sobe</b>.</li>
+        <li><b>Saídas:</b> quem acomoda o último filhote da mão sai com zero. Quem não tem jogada também sai, levando o que sobrou.</li>
+        <li><b>Fim:</b> vence quem tiver <b>menos filhotes na mão</b>; empate vai para quem jogou por último.</li>
+      </ul>
+      <h3>Atalhos</h3>
+      <ul>
+        <li><b>1…7</b> escolhe o filhote da mão · <b>Esc</b> desmarca · passe o mouse numa toca para ver a prévia.</li>
+      </ul>
+      <p class="credit">
+        <b>Ninho Fofo</b> é um projeto independente, com nome, identidade, textos e desenhos vetoriais originais. Código MIT. Não é adaptação de nenhum jogo comercial.
+      </p>
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-primary" data-close type="button">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-setup" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+    <h2 id="setup-title">Nova partida</h2>
+    <p class="sub">Jogue sozinho, com amigos no mesmo aparelho ou contra a máquina.</p>
+    <div class="field">
+      <label for="player-count">Número de jogadores</label>
+      <select id="player-count">
+        <option value="1">1 — solo</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Assentos</label>
+      <div id="seat-config"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close type="button">Cancelar</button>
+      <button class="btn btn-primary" id="btn-start" type="button">Começar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-over" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="over-title">
+    <h2 id="over-title">Fim de jogo</h2>
+    <p class="sub" id="over-sub"></p>
+    <ul class="ranking" id="ranking"></ul>
+    <div class="modal-actions">
+      <button class="btn" id="btn-over-setup" type="button">Trocar jogadores</button>
+      <button class="btn btn-primary" id="btn-again" type="button">Jogar de novo</button>
+    </div>
+  </div>
+</div>
+
+<!-- js/engine.js -->
+<script>
+/*
+ * Ninho Fofo — motor de regras original.
+ *
+ * 49 filhotes (7 espécies × 7 pelagens), um ninho compartilhado 7×7.
+ * Cada filhote precisa de uma toca vizinha, sem repetir cor nem espécie
+ * na mesma linha ou coluna. Depois de acomodar, o jogador pode pegar
+ * outro da cestinha; se não pegar, o limite da mão cai para sempre.
+ * Vence quem terminar com menos filhotes na mão.
+ */
+(function (root, factory) {
+  'use strict';
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.NinhoEngine = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  var SIZE = 7;
+  var N_TILES = SIZE * SIZE;
+
+  var COLORS = [
+    { id: 'algodao', name: 'Algodão', hex: '#f3c6d8', ink: '#7a3d55', pattern: 'hearts' },
+    { id: 'pessego', name: 'Pêssego', hex: '#f4a574', ink: '#7a3d1c', pattern: 'dots' },
+    { id: 'limao', name: 'Limão', hex: '#d4e056', ink: '#5b6414', pattern: 'stars' },
+    { id: 'hortela', name: 'Hortelã', hex: '#6ec9b4', ink: '#1f5c4e', pattern: 'leaves' },
+    { id: 'uva', name: 'Uva', hex: '#b39ddb', ink: '#4a3670', pattern: 'clouds' },
+    { id: 'caramelo', name: 'Caramelo', hex: '#e0b07a', ink: '#6a4a24', pattern: 'flowers' },
+    { id: 'chiclete', name: 'Chiclete', hex: '#ff8bb0', ink: '#7a2d4a', pattern: 'waves' }
+  ];
+
+  var SHAPES = [
+    { id: 'pintinho', name: 'Pintinho' },
+    { id: 'porquinho', name: 'Porquinho' },
+    { id: 'coruja', name: 'Corujinha' },
+    { id: 'axolote', name: 'Axolote' },
+    { id: 'capivara', name: 'Capivara' },
+    { id: 'ourico', name: 'Ouriço' },
+    { id: 'foca', name: 'Foca' }
+  ];
+
+  var COLUMN_LABELS = 'ABCDEFG';
+
+  /* ---------------------------------------------------------------- helpers */
+
+  function colorOf(tile) { return Math.floor(tile / SIZE); }
+  function shapeOf(tile) { return tile % SIZE; }
+  function idx(r, c) { return r * SIZE + c; }
+  function rowOf(i) { return Math.floor(i / SIZE); }
+  function colOf(i) { return i % SIZE; }
+  function cellLabel(i) { return COLUMN_LABELS[colOf(i)] + (rowOf(i) + 1); }
+  function tileLabel(tile) {
+    return SHAPES[shapeOf(tile)].name + ' ' + COLORS[colorOf(tile)].name.toLowerCase();
+  }
+
+  function makeTile(color, shape) { return color * SIZE + shape; }
+
+  function shuffle(arr, rng) {
+    rng = rng || Math.random;
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  function range(n) {
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(i);
+    return out;
+  }
+
+  /* ------------------------------------------------------------- regras base */
+
+  /** Peças (índices de célula) que conflitam com `tile` na linha/coluna de (r,c). */
+  function conflicts(state, tile, r, c) {
+    var res = [];
+    var color = colorOf(tile);
+    var shape = shapeOf(tile);
+    for (var i = 0; i < SIZE; i++) {
+      var inRow = state.grid[idx(r, i)];
+      if (inRow !== null && inRow !== undefined &&
+        (colorOf(inRow) === color || shapeOf(inRow) === shape)) {
+        res.push(idx(r, i));
+      }
+      var inCol = state.grid[idx(i, c)];
+      if (inCol !== null && inCol !== undefined &&
+        (colorOf(inCol) === color || shapeOf(inCol) === shape)) {
+        res.push(idx(i, c));
+      }
+    }
+    return res.filter(function (v, i, a) { return a.indexOf(v) === i; });
+  }
+
+  function hasNeighbor(state, r, c) {
+    var dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    for (var k = 0; k < dirs.length; k++) {
+      var rr = r + dirs[k][0], cc = c + dirs[k][1];
+      if (rr < 0 || rr >= SIZE || cc < 0 || cc >= SIZE) continue;
+      var v = state.grid[idx(rr, cc)];
+      if (v !== null && v !== undefined) return true;
+    }
+    return false;
+  }
+
+  function isEmptyCell(state, r, c) {
+    if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) return false;
+    var v = state.grid[idx(r, c)];
+    return v === null || v === undefined;
+  }
+
+  function isLegal(state, tile, r, c) {
+    if (!isEmptyCell(state, r, c)) return false;
+    var occupied = occupiedCount(state);
+    if (occupied > 0 && !hasNeighbor(state, r, c)) return false;
+    return conflicts(state, tile, r, c).length === 0;
+  }
+
+  /** Células onde a peça informada pode ser colocada. */
+  function legalCells(state, tile) {
+    var out = [];
+    for (var i = 0; i < N_TILES; i++) {
+      var r = rowOf(i), c = colOf(i);
+      if (isLegal(state, tile, r, c)) out.push(i);
+    }
+    return out;
+  }
+
+  /** Todas as jogadas legais de um jogador: [{ tile, cell }]. */
+  function legalMoves(state, player) {
+    var out = [];
+    for (var h = 0; h < player.hand.length; h++) {
+      var tile = player.hand[h];
+      var cells = legalCells(state, tile);
+      for (var k = 0; k < cells.length; k++) out.push({ tile: tile, cell: cells[k] });
+    }
+    return out;
+  }
+
+  function hasAnyMove(state, player) {
+    for (var h = 0; h < player.hand.length; h++) {
+      if (legalCells(state, player.hand[h]).length > 0) return true;
+    }
+    return false;
+  }
+
+  function occupiedCount(state) {
+    var n = 0;
+    for (var i = 0; i < N_TILES; i++) {
+      var v = state.grid[i];
+      if (v !== null && v !== undefined) n++;
+    }
+    return n;
+  }
+
+  /* -------------------------------------------------------------- estado */
+
+  function createGame(opts) {
+    opts = opts || {};
+    var rng = opts.rng || Math.random;
+    var seats = opts.players && opts.players.length ? opts.players : [
+      { name: 'Jogador 1', human: true },
+      { name: 'Máquina', human: false }
+    ];
+    var handSize = opts.handSize || 4;
+
+    var pool = shuffle(range(N_TILES), rng);
+    var grid = new Array(N_TILES).fill(null);
+
+    var starter = pool.pop();
+    grid[0] = starter;
+
+    var state = {
+      grid: grid,
+      starter: starter,
+      bag: pool,
+      players: seats.map(function (p, i) {
+        return {
+          seat: i,
+          name: p.name || ('Jogador ' + (i + 1)),
+          human: p.human !== false,
+          hand: [],
+          limit: handSize,
+          out: false,
+          outReason: null,
+          placed: 0,
+          lastOrder: 0,
+          draws: 0
+        };
+      }),
+      turn: 0,
+      phase: 'place', // 'place' | 'draw' | 'over'
+      turnCount: 0,
+      canDraw: false,
+      over: false,
+      ranking: [],
+      log: []
+    };
+
+    for (var k = 0; k < state.players.length; k++) {
+      for (var d = 0; d < handSize && pool.length; d++) {
+        state.players[k].hand.push(pool.pop());
+      }
+    }
+
+    pushLog(state, {
+      kind: 'setup',
+      text: 'Primeiro filhote no ninho: ' + tileLabel(starter) + '.'
+    });
+
+    beginTurn(state);
+    return state;
+  }
+
+  function pushLog(state, entry) {
+    entry.id = state.log.length + 1;
+    entry.order = state.turnCount;
+    state.log.push(entry);
+    if (state.log.length > 200) state.log.shift();
+    return entry;
+  }
+
+  function activePlayer(state) { return state.players[state.turn] || null; }
+
+  function nextSeat(state, from) {
+    var n = state.players.length;
+    for (var i = 1; i <= n; i++) {
+      var s = (from + i) % n;
+      if (!state.players[s].out) return s;
+    }
+    return -1;
+  }
+
+  function everyoneOut(state) {
+    return state.players.every(function (p) { return p.out; });
+  }
+
+  function finish(state) {
+    state.over = true;
+    state.phase = 'over';
+    state.ranking = ranking(state);
+    var winner = state.ranking[0];
+    pushLog(state, {
+      kind: 'end',
+      text: 'Fim de jogo. Vencedor: ' + winner.name + ' (' + winner.handLeft +
+        (winner.handLeft === 1 ? ' filhote na mão' : ' filhotes na mão') + ').'
+    });
+  }
+
+  /** Resolve eliminações e posiciona o jogo no próximo jogador ativo. */
+  function beginTurn(state) {
+    if (state.over) return state;
+    var guard = 0;
+    while (guard++ < 64) {
+      var p = activePlayer(state);
+      if (!p) { finish(state); return state; }
+
+      if (!p.out) {
+        if (p.hand.length === 0) {
+          p.out = true;
+          p.outReason = 'finished';
+          pushLog(state, { kind: 'out', seat: p.seat, text: p.name + ' acomodou todos os filhotes e saiu com a mão vazia.' });
+        } else if (!hasAnyMove(state, p)) {
+          p.out = true;
+          p.outReason = 'stuck';
+          pushLog(state, {
+            kind: 'out', seat: p.seat,
+            text: p.name + ' não tem jogada possível e está fora (' + p.hand.length +
+              (p.hand.length === 1 ? ' filhote na mão' : ' filhotes na mão') + ').'
+          });
+        }
+      }
+
+      if (everyoneOut(state)) { finish(state); return state; }
+
+      if (p.out) {
+        var nxt = nextSeat(state, state.turn);
+        if (nxt === -1) { finish(state); return state; }
+        state.turn = nxt;
+        continue;
+      }
+
+      state.phase = 'place';
+      state.canDraw = false;
+      return state;
+    }
+    return state;
+  }
+
+  /* ----------------------------------------------------------- ações */
+
+  function place(state, tile, r, c) {
+    if (state.over) return { ok: false, reason: 'A partida terminou.' };
+    if (state.phase !== 'place') return { ok: false, reason: 'Não é hora de colocar peça.' };
+
+    var p = activePlayer(state);
+    var at = p.hand.indexOf(tile);
+    if (at === -1) return { ok: false, reason: 'Essa peça não está na sua mão.' };
+    if (!isLegal(state, tile, r, c)) {
+      return { ok: false, reason: 'Jogada inválida: mesma cor ou espécie na linha/coluna.' };
+    }
+
+    p.hand.splice(at, 1);
+    state.grid[idx(r, c)] = tile;
+    state.turnCount++;
+    p.placed++;
+    p.lastOrder = state.turnCount;
+
+    pushLog(state, {
+      kind: 'place', seat: p.seat,
+      text: p.name + ' acomodou o ' + tileLabel(tile) + ' na toca ' + cellLabel(idx(r, c)) + '.'
+    });
+
+    if (p.hand.length === 0) {
+      p.out = true;
+      p.outReason = 'finished';
+      pushLog(state, { kind: 'out', seat: p.seat, text: p.name + ' acomodou o último filhote da mão.' });
+      if (everyoneOut(state)) { finish(state); return { ok: true, ended: true }; }
+      var nxt = nextSeat(state, state.turn);
+      if (nxt === -1) { finish(state); return { ok: true, ended: true }; }
+      state.turn = nxt;
+      beginTurn(state);
+      return { ok: true, ended: state.over };
+    }
+
+    state.phase = 'draw';
+    state.canDraw = state.bag.length > 0 && p.hand.length < p.limit;
+    return { ok: true };
+  }
+
+  function drawOrSkip(state, wantDraw) {
+    if (state.over) return { ok: false, reason: 'A partida terminou.' };
+    if (state.phase !== 'draw') return { ok: false, reason: 'Não é hora de comprar.' };
+
+    var p = activePlayer(state);
+    var canDraw = state.bag.length > 0 && p.hand.length < p.limit;
+    var drew = false;
+
+    if (wantDraw && canDraw) {
+      p.hand.push(state.bag.pop());
+      p.draws++;
+      drew = true;
+      pushLog(state, { kind: 'draw', seat: p.seat, text: p.name + ' pegou um filhote da cestinha (' + p.hand.length + ' na mão).' });
+    } else {
+      var before = p.limit;
+      p.limit = Math.min(p.limit, p.hand.length);
+      pushLog(state, {
+        kind: 'skip', seat: p.seat,
+        text: p.name + ' não comprou' + (p.limit < before ? ' e agora joga com no máximo ' + p.limit + '.' : '.')
+      });
+    }
+
+    var nxt = nextSeat(state, state.turn);
+    if (nxt === -1) { finish(state); return { ok: true, drew: drew, ended: true }; }
+    state.turn = nxt;
+    beginTurn(state);
+    return { ok: true, drew: drew, ended: state.over };
+  }
+
+  /* --------------------------------------------------------- classificação */
+
+  function ranking(state) {
+    return state.players.map(function (p) {
+      return {
+        seat: p.seat,
+        name: p.name,
+        human: p.human,
+        handLeft: p.hand.length,
+        placed: p.placed,
+        outReason: p.outReason,
+        lastOrder: p.lastOrder
+      };
+    }).sort(function (a, b) {
+      if (a.handLeft !== b.handLeft) return a.handLeft - b.handLeft;
+      if (a.lastOrder !== b.lastOrder) return b.lastOrder - a.lastOrder;
+      return a.seat - b.seat;
+    });
+  }
+
+  function cloneState(state) {
+    return {
+      grid: state.grid.slice(),
+      starter: state.starter,
+      bag: state.bag.slice(),
+      players: state.players.map(function (p) {
+        return {
+          seat: p.seat, name: p.name, human: p.human,
+          hand: p.hand.slice(), limit: p.limit, out: p.out,
+          outReason: p.outReason, placed: p.placed,
+          lastOrder: p.lastOrder, draws: p.draws
+        };
+      }),
+      turn: state.turn,
+      phase: state.phase,
+      turnCount: state.turnCount,
+      canDraw: state.canDraw,
+      over: state.over,
+      ranking: state.ranking.slice(),
+      log: state.log.slice()
+    };
+  }
+
+  return {
+    SIZE: SIZE,
+    N_TILES: N_TILES,
+    COLORS: COLORS,
+    SHAPES: SHAPES,
+    COLUMN_LABELS: COLUMN_LABELS,
+    colorOf: colorOf,
+    shapeOf: shapeOf,
+    idx: idx,
+    rowOf: rowOf,
+    colOf: colOf,
+    cellLabel: cellLabel,
+    tileLabel: tileLabel,
+    makeTile: makeTile,
+    createGame: createGame,
+    cloneState: cloneState,
+    conflicts: conflicts,
+    isLegal: isLegal,
+    legalCells: legalCells,
+    legalMoves: legalMoves,
+    hasAnyMove: hasAnyMove,
+    hasNeighbor: hasNeighbor,
+    occupiedCount: occupiedCount,
+    place: place,
+    drawOrSkip: drawOrSkip,
+    beginTurn: beginTurn,
+    activePlayer: activePlayer,
+    ranking: ranking,
+    pushLog: pushLog,
+    shuffle: shuffle,
+    range: range
+  };
+});
+
+</script>
+<!-- js/ai.js -->
+<script>
+/*
+ * Ninho Fofo — inteligência artificial.
+ * Prefere bloquear tocas dos outros e para de pegar filhotes perto da metade do ninho.
+ */
+(function (root, factory) {
+  'use strict';
+  var E = root && root.NinhoEngine ? root.NinhoEngine : require('./engine.js');
+  var api = factory(E);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.NinhoAI = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (E) {
+  'use strict';
+
+  var DIFFICULTY = {
+    //                     escolhe jogada aleatória   peso do bloqueio   flexibilidade   peça apertada   limiar de compra
+    easy: { randomChance: 0.80, block: 0.0, wFlex: 1.0, wWeak: 1.0, wFew: 0.0, drawThreshold: 0.30 },
+    medium: { randomChance: 0.12, block: 0.9, wFlex: 1.0, wWeak: 2.0, wFew: 1.0, drawThreshold: 0.43 },
+    hard: { randomChance: 0.0, block: 2.0, wFlex: 0.6, wWeak: 1.0, wFew: 1.0, drawThreshold: 0.49 }
+  };
+
+  function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+
+  /** Total de células legais somando todas as peças da mão. */
+  function totalFlex(state, player) {
+    var total = 0;
+    for (var i = 0; i < player.hand.length; i++) {
+      total += E.legalCells(state, player.hand[i]).length;
+    }
+    return total;
+  }
+
+  /** Menor número de células legais entre as peças da mão. */
+  function weakestTileFlex(state, player) {
+    var min = Infinity;
+    for (var i = 0; i < player.hand.length; i++) {
+      var n = E.legalCells(state, player.hand[i]).length;
+      if (n < min) min = n;
+    }
+    return min === Infinity ? 0 : min;
+  }
+
+  function opponentFlex(state, player) {
+    var total = 0;
+    for (var i = 0; i < state.players.length; i++) {
+      var other = state.players[i];
+      if (other.out || other.seat === player.seat) continue;
+      total += totalFlex(state, other);
+    }
+    return total;
+  }
+
+  /** Pontuação de uma jogada (quanto maior, melhor). */
+  function evaluate(state, player, move, cfg) {
+    var sim = E.cloneState(state);
+    var me = sim.players[player.seat];
+    var pos = me.hand.indexOf(move.tile);
+    if (pos >= 0) me.hand.splice(pos, 1);
+    sim.grid[move.cell] = move.tile;
+
+    var score = cfg.wFlex * totalFlex(sim, me) + cfg.wWeak * weakestTileFlex(sim, me);
+
+    if (cfg.block > 0) score -= cfg.block * opponentFlex(sim, me) * 0.35;
+
+    // Peças com poucas tocas disponíveis devem ser acomodados logo
+    var cellsNow = E.legalCells(state, move.tile).length;
+    score += cfg.wFew * Math.max(0, 8 - cellsNow);
+
+    // Desempate leve: prefere o centro, que mantém mais tocas vizinhas abertas
+    var r = E.rowOf(move.cell), c = E.colOf(move.cell);
+    score += (3 - Math.abs(3 - r)) * 0.15 + (3 - Math.abs(3 - c)) * 0.15;
+
+    return score;
+  }
+
+  /** Escolhe { tile, cell } para o jogador ativo. */
+  function chooseMove(state, difficulty, rng) {
+    rng = rng || Math.random;
+    var player = E.activePlayer(state);
+    var moves = E.legalMoves(state, player);
+    if (!moves.length) return null;
+
+    var cfg = DIFFICULTY[difficulty] || DIFFICULTY.medium;
+    if (cfg.randomChance && rng() < cfg.randomChance) return pick(moves, rng);
+
+    var best = null, bestScore = -Infinity;
+    for (var i = 0; i < moves.length; i++) {
+      var score = evaluate(state, player, moves[i], cfg);
+      if (score > bestScore) { bestScore = score; best = moves[i]; }
+    }
+    return best;
+  }
+
+  /**
+   * Compra uma peça depois de acomodar?
+   * Comprar mantém opções; parar de comprar trava o limite de mão e é o caminho
+   * para zerar. O limiar calibrado fica perto da metade do tabuleiro.
+   */
+  function chooseDraw(state, difficulty, rng) {
+    rng = rng || Math.random;
+    var player = E.activePlayer(state);
+    if (!player) return false;
+    if (state.bag.length === 0) return false;
+    if (player.hand.length >= player.limit) return false;
+
+    var cfg = DIFFICULTY[difficulty] || DIFFICULTY.medium;
+    var fill = E.occupiedCount(state) / E.N_TILES;
+    var dangerous = weakestTileFlex(state, player) <= 1;
+
+    var draw = fill < cfg.drawThreshold && !dangerous;
+    if (cfg.randomChance && rng() < cfg.randomChance * 0.9) draw = !draw;
+    return draw;
+  }
+
+  return {
+    DIFFICULTY: DIFFICULTY,
+    chooseMove: chooseMove,
+    chooseDraw: chooseDraw,
+    evaluate: evaluate,
+    totalFlex: totalFlex,
+    weakestTileFlex: weakestTileFlex,
+    opponentFlex: opponentFlex
+  };
+});
+
+</script>
+<!-- js/pieces.js -->
+<script>
+/*
+ * Ninho Fofo — filhotes vetoriais originais (7 espécies × 7 pelagens).
+ */
+(function (root, factory) {
+  'use strict';
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.NinhoPieces = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  var COLORS = [
+    { id: 'algodao', name: 'Algodão', hex: '#f3c6d8', pattern: 'hearts' },
+    { id: 'pessego', name: 'Pêssego', hex: '#f4a574', pattern: 'dots' },
+    { id: 'limao', name: 'Limão', hex: '#d4e056', pattern: 'stars' },
+    { id: 'hortela', name: 'Hortelã', hex: '#6ec9b4', pattern: 'leaves' },
+    { id: 'uva', name: 'Uva', hex: '#b39ddb', pattern: 'clouds' },
+    { id: 'caramelo', name: 'Caramelo', hex: '#e0b07a', pattern: 'flowers' },
+    { id: 'chiclete', name: 'Chiclete', hex: '#ff8bb0', pattern: 'waves' }
+  ];
+
+  function clamp(v) { return Math.max(0, Math.min(255, Math.round(v))); }
+  function hexToRgb(hex) {
+    var h = hex.replace('#', '');
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+  function mix(hex, target, amount) {
+    var a = hexToRgb(hex), b = hexToRgb(target);
+    return 'rgb(' + clamp(a[0] + (b[0] - a[0]) * amount) + ',' +
+      clamp(a[1] + (b[1] - a[1]) * amount) + ',' +
+      clamp(a[2] + (b[2] - a[2]) * amount) + ')';
+  }
+  function darken(hex, amount) { return mix(hex, '#000000', amount); }
+  function lighten(hex, amount) { return mix(hex, '#ffffff', amount); }
+
+  function patternBody(kind) {
+    switch (kind) {
+      case 'hearts': return '<path d="M6 10 C2 7 1 4 3 3 C4.5 2 6 3.5 6 4.5 C6 3.5 7.5 2 9 3 C11 4 10 7 6 10Z"/>';
+      case 'dots': return '<circle cx="3" cy="3" r="1.4"/><circle cx="9" cy="9" r="1.4"/>';
+      case 'stars': return '<path d="M6 1.5 L7.3 4.4 L10.5 4.7 L8 6.8 L8.8 10 L6 8.3 L3.2 10 L4 6.8 L1.5 4.7 L4.7 4.4Z"/>';
+      case 'leaves': return '<path d="M2 8 Q2 3 7 3 Q7 8 2 8 M7 10 Q7 6 11 6 Q11 10 7 10"/>';
+      case 'clouds': return '<path d="M1 8 Q1 5 4 5 Q5 2 8 4 Q11 4 11 8Z"/>';
+      case 'flowers': return '<circle cx="6" cy="3.5" r="2"/><circle cx="8.5" cy="6" r="2"/><circle cx="6" cy="8.5" r="2"/><circle cx="3.5" cy="6" r="2"/>';
+      case 'waves': return '<path d="M0 6 Q3 2 6 6 T12 6"/>';
+      default: return '';
+    }
+  }
+
+  function defs() {
+    return '<defs>' + COLORS.map(function (c) {
+      return '<pattern id="ninho-pat-' + c.id + '" patternUnits="userSpaceOnUse" width="12" height="12" patternTransform="scale(1.2)">' +
+        '<g fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">' +
+        patternBody(c.pattern) + '</g></pattern>';
+    }).join('') + '</defs>';
+  }
+
+  var FACE =
+    '<circle cx="40" cy="54" r="3.4" fill="#3d3340"/>' +
+    '<circle cx="60" cy="54" r="3.4" fill="#3d3340"/>' +
+    '<circle cx="41.2" cy="52.8" r="1.1" fill="#fff"/>' +
+    '<circle cx="61.2" cy="52.8" r="1.1" fill="#fff"/>' +
+    '<path d="M46 64 Q50 67.5 54 64" fill="none" stroke="#3d3340" stroke-width="2.2" stroke-linecap="round"/>' +
+    '<ellipse cx="32" cy="62" rx="6" ry="3.2" fill="#ffb3c0" opacity=".55"/>' +
+    '<ellipse cx="68" cy="62" rx="6" ry="3.2" fill="#ffb3c0" opacity=".55"/>';
+
+  var ANIMALS = [
+    // Pintinho
+    '<ellipse cx="50" cy="62" rx="30" ry="26" fill="__BODY__" stroke="__OUT__" stroke-width="3"/>' +
+    '__PAT__' +
+    '<ellipse cx="22" cy="62" rx="8" ry="12" fill="__LIGHT__" stroke="__OUT__" stroke-width="2"/>' +
+    '<circle cx="50" cy="40" r="22" fill="__BODY__" stroke="__OUT__" stroke-width="3"/>' +
+    '<polygon points="50,52 42,58 58,58" fill="#f08a3a"/>' +
+    '<polygon points="46,78 50,88 54,78" fill="#f08a3a"/>' + FACE,
+
+    // Porquinho
+    '<ellipse cx="50" cy="60" rx="32" ry="28" fill="__BODY__" stroke="__OUT__" stroke-width="3"/>' +
+    '__PAT__' +
+    '<ellipse cx="24" cy="38" rx="10" ry="14" fill="__LIGHT__" stroke="__OUT__" stroke-width="2.5"/>' +
+    '<ellipse cx="76" cy="38" rx="10" ry="14" fill="__LIGHT__" stroke="__OUT__" stroke-width="2.5"/>' +
+    FACE +
+    '<ellipse cx="50" cy="66" rx="10" ry="7" fill="__LIGHT__" stroke="__OUT__" stroke-width="2"/>' +
+    '<circle cx="46" cy="66" r="1.6" fill="#3d3340"/><circle cx="54" cy="66" r="1.6" fill="#3d3340"/>',
+
+    // Corujinha
+    '<ellipse cx="50" cy="60" rx="30" ry="30" fill="__BODY__" stroke="__OUT__" stroke-width="3"/>' +
+    '__PAT__' +
+    '<polygon points="22,28 30,8 40,30" fill="__BODY__" stroke="__OUT__" stroke-width="2.5"/>' +
+    '<polygon points="78,28 70,8 60,30" fill="__BODY__" stroke="__OUT__" stroke-width="2.5"/>' +
+    '<circle cx="38" cy="52" r="11" fill="#fff"/><circle cx="62" cy="52" r="11" fill="#fff"/>' +
+    '<circle cx="38" cy="53" r="5.5" fill="#3d3340"/><circle cx="62" cy="53" r="5.5" fill="#3d3340"/>' +
+    '<circle cx="40" cy="51" r="1.6" fill="#fff"/><circle cx="64" cy="51" r="1.6" fill="#fff"/>' +
+    '<polygon points="50,60 44,68 56,68" fill="#f08a3a"/>',
+
+    // Axolote
+    '<ellipse cx="18" cy="42" rx="10" ry="16" fill="#ff9bb8" stroke="__OUT__" stroke-width="2" transform="rotate(-25 18 42)"/>' +
+    '<ellipse cx="82" cy="42" rx="10" ry="16" fill="#ff9bb8" stroke="__OUT__" stroke-width="2" transform="rotate(25 82 42)"/>' +
+    '<ellipse cx="16" cy="58" rx="8" ry="12" fill="#ff9bb8" stroke="__OUT__" stroke-width="2"/>' +
+    '<ellipse cx="84" cy="58" rx="8" ry="12" fill="#ff9bb8" stroke="__OUT__" stroke-width="2"/>' +
+    '<ellipse cx="50" cy="58" rx="32" ry="28" fill="__BODY__" stroke="__OUT__" stroke-width="3"/>' +
+    '__PAT__' + FACE +
+    '<path d="M44 70 Q50 74 56 70" fill="none" stroke="#3d3340" stroke-width="2" stroke-linecap="round"/>',
+
+    // Capivara
+    '<ellipse cx="50" cy="58" rx="34" ry="30" fill="__BODY__" stroke="__OUT__" stroke-width="3"/>' +
+    '__PAT__' +
+    '<ellipse cx="28" cy="32" rx="8" ry="10" fill="__BODY__" stroke="__OUT__" stroke-width="2.5"/>' +
+    '<ellipse cx="72" cy="32" rx="8" ry="10" fill="__BODY__" stroke="__OUT__" stroke-width="2.5"/>' +
+    FACE +
+    '<ellipse cx="50" cy="70" rx="14" ry="8" fill="__LIGHT__"/>' +
+    '<path d="M42 70 Q50 76 58 70" fill="none" stroke="#3d3340" stroke-width="2" stroke-linecap="round"/>',
+
+    // Ouriço
+    '<path d="M18 70 L22 28 L32 48 L40 18 L50 44 L60 16 L68 46 L78 26 L84 70 Z" fill="__OUT__"/>' +
+    '<ellipse cx="50" cy="64" rx="30" ry="24" fill="__BODY__" stroke="__OUT__" stroke-width="3"/>' +
+    '__PAT__' + FACE,
+
+    // Foca
+    '<ellipse cx="50" cy="62" rx="34" ry="26" fill="__BODY__" stroke="__OUT__" stroke-width="3"/>' +
+    '__PAT__' +
+    '<ellipse cx="18" cy="72" rx="12" ry="7" fill="__LIGHT__" stroke="__OUT__" stroke-width="2"/>' +
+    '<ellipse cx="82" cy="72" rx="12" ry="7" fill="__LIGHT__" stroke="__OUT__" stroke-width="2"/>' +
+    FACE +
+    '<path d="M28 58 Q22 54 18 58 M72 58 Q78 54 82 58" fill="none" stroke="#3d3340" stroke-width="1.6" stroke-linecap="round"/>' +
+    '<ellipse cx="50" cy="66" rx="5" ry="3.4" fill="#3d3340"/>'
+  ];
+
+  var SHAPE_NAMES = ['Pintinho', 'Porquinho', 'Corujinha', 'Axolote', 'Capivara', 'Ouriço', 'Foca'];
+
+  function svgFor(shape, color) {
+    var c = COLORS[color % COLORS.length];
+    var body = c.hex;
+    var out = darken(body, 0.32);
+    var light = lighten(body, 0.7);
+    var pattern = '<ellipse cx="50" cy="60" rx="26" ry="22" fill="url(#ninho-pat-' + c.id + ')"/>';
+    var markup = ANIMALS[shape % ANIMALS.length]
+      .replace(/__BODY__/g, body)
+      .replace(/__OUT__/g, out)
+      .replace(/__LIGHT__/g, light)
+      .replace(/__PAT__/g, pattern);
+    return '<svg class="animal-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true" focusable="false">' + markup + '</svg>';
+  }
+
+  function cardBg(color) { return mix(COLORS[color % COLORS.length].hex, '#ffffff', 0.88); }
+
+  return {
+    COLORS: COLORS,
+    SHAPE_NAMES: SHAPE_NAMES,
+    defs: defs,
+    svgFor: svgFor,
+    cardBg: cardBg,
+    darken: darken,
+    lighten: lighten,
+    mix: mix
+  };
+});
+
+</script>
+<!-- js/game.js -->
+<script>
+/*
+ * Ninho Fofo — interface e controle de turnos.
+ */
+(function () {
+  'use strict';
+
+  var E = window.NinhoEngine;
+  var AI = window.NinhoAI;
+  var P = window.NinhoPieces;
+
+  var $ = function (sel) { return document.querySelector(sel); };
+
+  var DEFAULT_CONFIG = {
+    seats: [
+      { name: 'Você', human: true, difficulty: 'medium' },
+      { name: 'Máquina', human: false, difficulty: 'medium' }
+    ],
+    sound: true
+  };
+
+  var config = loadConfig();
+  var state = null;
+  var cells = [];
+  var selectedTile = null;
+  var hoverCell = null;
+  var aiTimer = null;
+  var audioCtx = null;
+
+  /* ------------------------------------------------------- persistência */
+
+  function loadConfig() {
+    try {
+      var raw = localStorage.getItem('ninho.config');
+      if (!raw) return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+      var parsed = JSON.parse(raw);
+      if (!parsed.seats || !parsed.seats.length) return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+      return parsed;
+    } catch (err) {
+      return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    }
+  }
+
+  function saveConfig() {
+    try { localStorage.setItem('ninho.config', JSON.stringify(config)); } catch (err) { /* ignora */ }
+  }
+
+  /* ------------------------------------------------------------- som */
+
+  function sound(kind) {
+    if (!config.sound) return;
+    try {
+      if (!audioCtx) {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        audioCtx = new Ctx();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var now = audioCtx.currentTime;
+      var notes = { place: [523.25, 659.25], draw: [392], skip: [311.1, 233.1], bad: [174.6], win: [523.25, 659.25, 783.99, 1046.5] }[kind] || [440];
+      notes.forEach(function (freq, i) {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = kind === 'bad' ? 'sawtooth' : 'triangle';
+        osc.frequency.value = freq;
+        var t0 = now + i * 0.085;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.12, t0 + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.18);
+      });
+    } catch (err) { /* som é opcional */ }
+  }
+
+  /* --------------------------------------------------------- utilidades */
+
+  function difficultyFor(seat) {
+    var cfg = config.seats[seat];
+    return (cfg && cfg.difficulty) || 'medium';
+  }
+
+  function isHumanTurn() {
+    if (!state || state.over) return false;
+    var p = E.activePlayer(state);
+    return !!(p && p.human);
+  }
+
+  function seatClass(seat) { return 'p' + ((seat % 5) + 1); }
+
+  function handCountText(n) { return n === 1 ? '1 filhote' : n + ' filhotes'; }
+
+  /* ------------------------------------------------------------ partida */
+
+  function newGame() {
+    clearTimeout(aiTimer);
+    selectedTile = null;
+    hoverCell = null;
+    state = E.createGame({
+      players: config.seats.map(function (s) {
+        return { name: s.name, human: s.human };
+      }),
+      handSize: 4
+    });
+    buildBoard();
+    render();
+    scheduleAI();
+  }
+
+  function buildBoard() {
+    var board = $('#board');
+    board.innerHTML = '';
+    cells = [];
+    for (var i = 0; i < E.N_TILES; i++) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cell empty';
+      btn.dataset.index = String(i);
+      btn.setAttribute('role', 'gridcell');
+      btn.setAttribute('aria-label', 'toca ' + E.cellLabel(i));
+      board.appendChild(btn);
+      cells.push(btn);
+    }
+  }
+
+  /* ------------------------------------------------------------- render */
+
+  function render() {
+    renderTurn();
+    renderPlayers();
+    renderBoard();
+    renderHand();
+    renderActions();
+    renderLog();
+    $('#fill-count').textContent = E.occupiedCount(state);
+    $('#bag-count').textContent = state.bag.length;
+  }
+
+  function renderTurn() {
+    var line = $('#turn-line');
+    var name = $('#turn-name');
+    var sub = $('#turn-sub');
+    var badge = line.querySelector('.badge');
+
+    if (state.over) {
+      badge.className = 'badge';
+      badge.textContent = '★';
+      name.firstChild.nodeValue = 'Partida encerrada';
+      sub.textContent = 'veja o resultado';
+      return;
+    }
+
+    var p = E.activePlayer(state);
+    badge.className = 'badge ' + seatClass(p.seat);
+    badge.textContent = String(p.seat + 1);
+    name.firstChild.nodeValue = p.name;
+    if (p.human) {
+      sub.textContent = state.phase === 'draw'
+        ? 'sua vez — comprar ou segurar?'
+        : 'sua vez — acomode um filhote';
+    } else {
+      sub.textContent = 'pensando…';
+    }
+  }
+
+  function renderPlayers() {
+    var ul = $('#players');
+    ul.innerHTML = '';
+    state.players.forEach(function (p) {
+      var li = document.createElement('li');
+      if (!state.over && state.turn === p.seat && !p.out) li.classList.add('active');
+      if (p.out) li.classList.add('out');
+
+      var badge = document.createElement('span');
+      badge.className = 'badge ' + seatClass(p.seat);
+      badge.textContent = String(p.seat + 1);
+
+      var nm = document.createElement('span');
+      nm.className = 'p-name';
+      nm.textContent = p.name + (p.human ? '' : ' · IA');
+
+      var meta = document.createElement('span');
+      meta.className = 'p-meta';
+      if (p.out) {
+        meta.textContent = p.outReason === 'finished' ? 'zerou a mão' : 'sem jogada';
+      } else {
+        meta.textContent = 'limite ' + p.limit + ' · ' + p.placed + ' no ninho';
+      }
+
+      var count = document.createElement('span');
+      count.className = 'p-count';
+      count.textContent = String(p.hand.length);
+
+      li.appendChild(badge);
+      li.appendChild(nm);
+      li.appendChild(meta);
+      li.appendChild(count);
+      ul.appendChild(li);
+    });
+  }
+
+  function renderBoard() {
+    var active = state.over ? null : E.activePlayer(state);
+    var selected = selectedTile;
+
+    for (var i = 0; i < E.N_TILES; i++) {
+      var el = cells[i];
+      var tile = state.grid[i];
+      var filled = tile !== null && tile !== undefined;
+
+      if (filled) {
+        if (el.dataset.tile !== String(tile)) {
+          el.innerHTML = P.svgFor(E.shapeOf(tile), E.colorOf(tile));
+          el.dataset.tile = String(tile);
+        }
+        el.classList.add('filled');
+        el.classList.remove('empty', 'legal', 'ghost');
+      } else {
+        if (el.dataset.tile) {
+          el.innerHTML = '';
+          el.dataset.tile = '';
+        }
+        el.classList.add('empty');
+        el.classList.remove('filled');
+      }
+
+      el.classList.toggle('starter', i === 0);
+      el.classList.remove('conflict', 'hl-row', 'hl-col');
+
+      if (!filled) {
+        var legal = false;
+        if (selected !== null && active && active.human && state.phase === 'place') {
+          legal = E.isLegal(state, selected, E.rowOf(i), E.colOf(i));
+        } else if (hoverCell === null) {
+          legal = false;
+        }
+        el.classList.toggle('legal', legal);
+
+        // Prévia do bichinho selecionado sobre a toca em foco
+        if (selected !== null && hoverCell === i && legal) {
+          if (el.dataset.ghost !== String(selected)) {
+            el.innerHTML = P.svgFor(E.shapeOf(selected), E.colorOf(selected));
+            el.dataset.ghost = String(selected);
+          }
+          el.classList.add('ghost');
+        } else if (el.dataset.ghost) {
+          el.innerHTML = '';
+          el.dataset.ghost = '';
+          el.classList.remove('ghost');
+        }
+      }
+
+      el.disabled = !el.classList.contains('legal');
+    }
+
+    // Destaques de conflito na linha/coluna da toca em foco
+    if (selected !== null && hoverCell !== null && cells[hoverCell].classList.contains('legal')) {
+      var r = E.rowOf(hoverCell), c = E.colOf(hoverCell);
+      var conflicts = E.conflicts(state, selected, r, c);
+      for (var k = 0; k < 7; k++) {
+        cells[E.idx(r, k)].classList.add('hl-row');
+        cells[E.idx(k, c)].classList.add('hl-col');
+      }
+      conflicts.forEach(function (ci) { cells[ci].classList.add('conflict'); });
+    }
+  }
+
+  function renderHand() {
+    var wrap = $('#hand');
+    wrap.innerHTML = '';
+    var active = state.over ? null : E.activePlayer(state);
+    var showHand = active && active.human;
+
+    $('#hand-hint').textContent = showHand
+      ? 'clique num bichinho e depois numa toca'
+      : (state.over ? 'partida encerrada' : 'aguarde a vez da máquina');
+
+    var hand = showHand ? active.hand : (active ? [] : []);
+
+    if (!state.over && !showHand) {
+      var wait = document.createElement('div');
+      wait.className = 'hand-empty';
+      wait.textContent = 'Os filhotes da máquina ficam escondidos na toca.';
+      wrap.appendChild(wait);
+      return;
+    }
+
+    if (!hand.length) {
+      var empty = document.createElement('div');
+      empty.className = 'hand-empty';
+      empty.textContent = state.over ? 'Nenhum filhote na mão.' : 'Sua mão está vazia.';
+      wrap.appendChild(empty);
+      return;
+    }
+
+    hand.forEach(function (tile, idxInHand) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tile';
+      btn.dataset.tile = String(tile);
+      btn.style.background = P.cardBg(E.colorOf(tile));
+      var legalTiles = E.legalCells(state, tile).length;
+      btn.title = E.tileLabel(tile) + ' · ' +
+        (legalTiles === 0 ? 'não cabe em nenhuma toca agora' : legalTiles + (legalTiles === 1 ? ' toca possível' : ' tocas possíveis'));
+      btn.setAttribute('aria-label', btn.title);
+      btn.innerHTML = P.svgFor(E.shapeOf(tile), E.colorOf(tile));
+
+      var kb = document.createElement('span');
+      kb.className = 'kbd';
+      kb.textContent = String(idxInHand + 1);
+      btn.appendChild(kb);
+
+      var legalCount = E.legalCells(state, tile).length;
+      if (legalCount === 0) btn.classList.add('dead');
+      if (selectedTile === tile) btn.classList.add('selected');
+
+      btn.addEventListener('click', function () {
+        if (!isHumanTurn() || state.phase !== 'place') return;
+        if (legalCount === 0) { sound('bad'); return; }
+        selectedTile = (selectedTile === tile) ? null : tile;
+        hoverCell = null;
+        renderBoard();
+        renderHand();
+        renderActions();
+      });
+
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderActions() {
+    var notice = $('#action-notice');
+    var slots = $('#draw-slots');
+    var autoBtn = $('#btn-auto');
+    notice.className = 'notice';
+
+    slots.hidden = true;
+    autoBtn.disabled = !isHumanTurn();
+
+    if (state.over) {
+      notice.textContent = 'A partida terminou. Veja o resultado.';
+      return;
+    }
+
+    var p = E.activePlayer(state);
+
+    if (!p.human) {
+      notice.textContent = p.name + ' está escolhendo onde acomodar…';
+      return;
+    }
+
+    if (state.phase === 'draw') {
+      slots.hidden = false;
+      notice.className = 'notice good';
+      notice.textContent = 'Filhote acomodado. Pegar outro da cestinha (' + state.bag.length +
+        ' restantes)? Se não pegar, seu limite de mão cai para ' + p.hand.length + ' e não sobe mais.';
+      $('#btn-draw').disabled = !state.canDraw;
+      return;
+    }
+
+    if (selectedTile === null) {
+      var dead = p.hand.filter(function (t) { return E.legalCells(state, t).length === 0; }).length;
+      notice.textContent = dead > 0
+        ? dead + (dead === 1 ? ' filhote não cabe' : ' filhotes não cabem') +
+          ' em nenhuma toca agora (podem voltar a caber conforme o ninho cresce). Jogue com os que cabem.'
+        : 'Escolha um filhote da mão para ver as tocas livres.';
+      if (dead > 0) notice.className = 'notice warn';
+      return;
+    }
+
+    var spots = E.legalCells(state, selectedTile).length;
+    notice.textContent = E.tileLabel(selectedTile) + ': ' + spots +
+      (spots === 1 ? ' toca destacada' : ' tocas destacadas') + '. Clique em uma delas.';
+  }
+
+  function renderLog() {
+    var ul = $('#log');
+    ul.innerHTML = '';
+    state.log.slice(-40).forEach(function (entry) {
+      var li = document.createElement('li');
+      li.className = entry.kind;
+      li.textContent = entry.text;
+      ul.appendChild(li);
+    });
+    ul.scrollTop = ul.scrollHeight;
+  }
+
+  function renderLegend() {
+    var legend = $('#legend');
+    legend.innerHTML = '';
+    P.COLORS.forEach(function (c, i) {
+      var span = document.createElement('span');
+      span.innerHTML = '<i style="background:' + c.hex + '"></i>' + E.COLORS[i].name;
+      legend.appendChild(span);
+    });
+  }
+
+  /* --------------------------------------------------------------- IA */
+
+  function scheduleAI() {
+    clearTimeout(aiTimer);
+    if (!state || state.over) return;
+    var p = E.activePlayer(state);
+    if (!p || p.human) return;
+    aiTimer = setTimeout(aiStep, 480);
+  }
+
+  function aiStep() {
+    if (!state || state.over) return;
+    var p = E.activePlayer(state);
+    if (!p || p.human) return;
+
+    if (state.phase === 'place') {
+      var move = AI.chooseMove(state, difficultyFor(p.seat));
+      if (!move) {
+        E.beginTurn(state);
+      } else {
+        var res = E.place(state, move.tile, E.rowOf(move.cell), E.colOf(move.cell));
+        if (res.ok) sound('place');
+      }
+    } else if (state.phase === 'draw') {
+      var wantDraw = AI.chooseDraw(state, difficultyFor(p.seat));
+      var out = E.drawOrSkip(state, wantDraw);
+      if (out.ok) sound(wantDraw ? 'draw' : 'skip');
+    }
+
+    selectedTile = null;
+    render();
+    if (checkOver()) return;
+    scheduleAI();
+  }
+
+  /* ------------------------------------------------------ fim de partida */
+
+  function checkOver() {
+    if (!state.over) return false;
+    showOverModal();
+    return true;
+  }
+
+  function showOverModal() {
+    var ranking = state.ranking.length ? state.ranking : E.ranking(state);
+    var ul = $('#ranking');
+    ul.innerHTML = '';
+    var top = ranking[0];
+
+    ranking.forEach(function (row, i) {
+      var li = document.createElement('li');
+      if (i === 0 && row.handLeft === top.handLeft && row.lastOrder === top.lastOrder) li.classList.add('winner');
+      var pos = document.createElement('span');
+      pos.className = 'pos';
+      pos.textContent = String(i + 1) + '.';
+      var nm = document.createElement('span');
+      nm.className = 'r-name';
+      nm.textContent = row.name + (row.human ? '' : ' · IA');
+      var meta = document.createElement('span');
+      meta.className = 'r-meta';
+      meta.textContent = handCountText(row.handLeft) + ' na mão · ' + row.placed + ' acomodados';
+      li.appendChild(pos); li.appendChild(nm); li.appendChild(meta);
+      ul.appendChild(li);
+    });
+
+    var solo = state.players.length === 1;
+    $('#over-title').textContent = solo ? 'Fim de jogo' : 'Fim de jogo';
+    $('#over-sub').textContent = solo
+      ? 'Você terminou com ' + handCountText(top.handLeft) + ' na mão.'
+      : 'Vence quem tiver menos filhotes na mão — ' + top.name + ' com ' + handCountText(top.handLeft) + '.';
+    $('#modal-over').hidden = false;
+    sound('win');
+  }
+
+  /* ------------------------------------------------------------- ações */
+
+  function humanPlace(cellIndex) {
+    if (!isHumanTurn() || state.phase !== 'place' || selectedTile === null) return;
+    var r = E.rowOf(cellIndex), c = E.colOf(cellIndex);
+    if (!E.isLegal(state, selectedTile, r, c)) { sound('bad'); return; }
+    var tile = selectedTile;
+    var res = E.place(state, tile, r, c);
+    if (!res.ok) { sound('bad'); return; }
+    sound('place');
+    selectedTile = null;
+    hoverCell = null;
+    render();
+    if (checkOver()) return;
+    scheduleAI();
+  }
+
+  function humanDraw(wantDraw) {
+    if (!isHumanTurn() || state.phase !== 'draw') return;
+    var res = E.drawOrSkip(state, wantDraw);
+    if (!res.ok) return;
+    sound(wantDraw ? 'draw' : 'skip');
+    render();
+    if (checkOver()) return;
+    scheduleAI();
+  }
+
+  function autoPlayReal() {
+    if (!isHumanTurn()) return;
+    if (state.phase === 'draw') { humanDraw(AI.chooseDraw(state, 'hard')); return; }
+    var move = AI.chooseMove(state, 'hard');
+    if (!move) return;
+    selectedTile = move.tile;
+    humanPlace(move.cell);
+  }
+
+  /* --------------------------------------------------------- eventos */
+
+  function bindEvents() {
+    $('#board').addEventListener('click', function (ev) {
+      var cell = ev.target.closest('.cell');
+      if (!cell) return;
+      humanPlace(Number(cell.dataset.index));
+    });
+
+    $('#board').addEventListener('mouseover', function (ev) {
+      var cell = ev.target.closest('.cell');
+      if (!cell) return;
+      var i = Number(cell.dataset.index);
+      if (hoverCell === i) return;
+      hoverCell = i;
+      renderBoard();
+    });
+
+    $('#board').addEventListener('mouseleave', function () {
+      if (hoverCell !== null) { hoverCell = null; renderBoard(); }
+    });
+
+    $('#btn-draw').addEventListener('click', function () { humanDraw(true); });
+    $('#btn-skip').addEventListener('click', function () { humanDraw(false); });
+    $('#btn-auto').addEventListener('click', autoPlayReal);
+
+    $('#btn-rules').addEventListener('click', function () { $('#modal-rules').hidden = false; });
+    $('#modal-rules').addEventListener('click', function (ev) {
+      if (ev.target.id === 'modal-rules' || ev.target.hasAttribute('data-close')) $('#modal-rules').hidden = true;
+    });
+
+    $('#btn-setup').addEventListener('click', openSetup);
+    $('#modal-setup').addEventListener('click', function (ev) {
+      if (ev.target.id === 'modal-setup' || ev.target.hasAttribute('data-close')) $('#modal-setup').hidden = true;
+    });
+    $('#btn-over-setup').addEventListener('click', function () {
+      $('#modal-over').hidden = true;
+      openSetup();
+    });
+    $('#btn-again').addEventListener('click', function () {
+      $('#modal-over').hidden = true;
+      newGame();
+    });
+
+    $('#btn-sound').addEventListener('click', function () {
+      config.sound = !config.sound;
+      saveConfig();
+      updateSoundButton();
+      if (config.sound) sound('place');
+    });
+
+    $('#player-count').addEventListener('change', function () {
+      renderSeatConfig(Number(this.value));
+    });
+
+    $('#seat-config').addEventListener('change', function () {
+      collectSeatConfig();
+    });
+
+    $('#btn-start').addEventListener('click', function () {
+      collectSeatConfig();
+      saveConfig();
+      $('#modal-setup').hidden = true;
+      newGame();
+    });
+
+    document.addEventListener('keydown', function (ev) {
+      if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT') return;
+      if (ev.key === 'Escape') {
+        selectedTile = null;
+        hoverCell = null;
+        renderBoard(); renderHand(); renderActions();
+        return;
+      }
+      if (/^[1-7]$/.test(ev.key) && isHumanTurn() && state.phase === 'place') {
+        var p = E.activePlayer(state);
+        var tile = p.hand[Number(ev.key) - 1];
+        if (tile === undefined) return;
+        if (E.legalCells(state, tile).length === 0) { sound('bad'); return; }
+        selectedTile = (selectedTile === tile) ? null : tile;
+        hoverCell = null;
+        renderBoard(); renderHand(); renderActions();
+      }
+      if (ev.key === 'Enter' && isHumanTurn() && state.phase === 'draw') {
+        if (state.canDraw) humanDraw(true); else humanDraw(false);
+      }
+    });
+  }
+
+  /* -------------------------------------------------------------- setup */
+
+  function renderSeatConfig(count) {
+    var wrap = $('#seat-config');
+    var prev = config.seats.slice();
+    wrap.innerHTML = '';
+
+    for (var i = 0; i < count; i++) {
+      var old = prev[i] || {};
+      var row = document.createElement('div');
+      row.className = 'seat-row';
+
+      var badge = document.createElement('span');
+      badge.className = 'badge ' + seatClass(i);
+      badge.textContent = String(i + 1);
+
+      var name = document.createElement('input');
+      name.type = 'text';
+      name.value = old.name || (i === 0 ? (count === 1 ? 'Você' : 'Jogador 1') : 'Jogador ' + (i + 1));
+      name.dataset.role = 'name';
+      name.maxLength = 14;
+
+      var type = document.createElement('select');
+      type.dataset.role = 'type';
+      [['human', 'Humano'], ['ai', 'Máquina']].forEach(function (opt) {
+        var o = document.createElement('option');
+        o.value = opt[0];
+        o.textContent = opt[1];
+        type.appendChild(o);
+      });
+      var wasHuman = old.human !== undefined ? old.human : (i === 0);
+      type.value = wasHuman ? 'human' : 'ai';
+
+      var diff = document.createElement('select');
+      diff.dataset.role = 'difficulty';
+      [['easy', 'IA fácil'], ['medium', 'IA média'], ['hard', 'IA difícil']].forEach(function (opt) {
+        var o = document.createElement('option');
+        o.value = opt[0];
+        o.textContent = opt[1];
+        diff.appendChild(o);
+      });
+      diff.value = old.difficulty || 'medium';
+      diff.disabled = type.value === 'human';
+
+      type.addEventListener('change', function () {
+        diff.disabled = this.value === 'human';
+      });
+
+      row.appendChild(badge);
+      row.appendChild(name);
+      row.appendChild(type);
+      row.appendChild(diff);
+      wrap.appendChild(row);
+    }
+  }
+
+  function collectSeatConfig() {
+    var rows = $('#seat-config').querySelectorAll('.seat-row');
+    var seats = [];
+    rows.forEach(function (row) {
+      var name = row.querySelector('[data-role="name"]').value.trim();
+      var type = row.querySelector('[data-role="type"]').value;
+      var diff = row.querySelector('[data-role="difficulty"]').value;
+      seats.push({
+        name: name || ('Jogador ' + (seats.length + 1)),
+        human: type === 'human',
+        difficulty: diff
+      });
+    });
+    config.seats = seats;
+  }
+
+  function openSetup() {
+    var count = Math.min(5, Math.max(1, config.seats.length || 2));
+    $('#player-count').value = String(count);
+    renderSeatConfig(count);
+    $('#modal-setup').hidden = false;
+  }
+
+  function updateSoundButton() {
+    var btn = $('#btn-sound');
+    btn.textContent = 'Som: ' + (config.sound ? 'ligado' : 'desligado');
+    btn.setAttribute('aria-pressed', config.sound ? 'true' : 'false');
+  }
+
+  /* --------------------------------------------------------------- init */
+
+  function init() {
+    $('#svg-defs').innerHTML = P.defs();
+    renderLegend();
+    bindEvents();
+    updateSoundButton();
+    newGame();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+</script>
+</body>
+</html>

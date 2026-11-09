@@ -1,0 +1,12 @@
+{
+  "name": "ninho-fofo",
+  "version": "1.0.0",
+  "description": "Ninho Fofo — jogo de lógica original com filhotes fofinhos, para o navegador.",
+  "private": false,
+  "license": "MIT",
+  "scripts": {
+    "test": "node tests/engine.test.js",
+    "build": "node tools/build.mjs",
+    "serve": "python3 -m http.server 8000"
+  }
+}

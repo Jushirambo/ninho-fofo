@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ninho Fofo — filhotes no bosque</title>
+<meta name="description" content="Jogo de lógica original com filhotes fofinhos. Acomode 49 bichinhos num ninho 7×7 sem repetir cor ou espécie.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='28' fill='%23ffe0ee'/><circle cx='50' cy='58' r='26' fill='%23ff8bb0'/><circle cx='50' cy='50' r='8' fill='%23fff'/></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <h1>Ninho Fofo</h1>
+      <span class="tag">filhotes · lógica · 1 a 5 jogadores</span>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="btn-rules" type="button">Regras</button>
+      <button class="btn" id="btn-setup" type="button">Nova partida</button>
+      <button class="btn btn-ghost" id="btn-sound" type="button" aria-pressed="true">Som: ligado</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="board-area" aria-label="Ninho">
+      <div class="board-frame">
+        <div class="board" id="board" role="grid" aria-label="Ninho 7 por 7"></div>
+        <svg id="svg-defs" width="0" height="0" aria-hidden="true" focusable="false"
+             style="position:absolute;width:0;height:0;overflow:hidden"></svg>
+      </div>
+      <div class="board-caption">
+        <span><b id="fill-count">1</b>/49 filhotes acomodados</span>
+        <span>Cestinha: <b id="bag-count">0</b></span>
+        <span>Sem repetir <b>cor</b> ou <b>espécie</b> na linha/coluna</span>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <aside class="sidebar">
+      <section class="panel">
+        <h2>Vez de jogar</h2>
+        <div class="turn" id="turn-line">
+          <span class="badge p1">1</span>
+          <span id="turn-name">—<small id="turn-sub">carregando…</small></span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Jogadores</h2>
+        <ul class="players" id="players"></ul>
+      </section>
+
+      <section class="panel">
+        <div class="hand-head">
+          <h2 style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#c56b90">Mão</h2>
+          <span class="hint" id="hand-hint">clique num filhote e depois numa toca</span>
+        </div>
+        <div class="hand" id="hand"></div>
+      </section>
+
+      <section class="panel actions" id="actions">
+        <div id="action-notice" class="notice">Escolha um filhote da mão.</div>
+        <div class="draw-slots" id="draw-slots" hidden>
+          <button class="btn btn-primary" id="btn-draw" type="button">Pegar filhote</button>
+          <button class="btn" id="btn-skip" type="button">Não pegar</button>
+        </div>
+        <button class="btn btn-ghost" id="btn-auto" type="button">Jogar automaticamente</button>
+      </section>
+
+      <section class="panel">
+        <h2>Histórico</h2>
+        <ul class="log" id="log"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    Ninho Fofo é um jogo independente: nome, textos e ilustrações vetoriais são originais deste projeto.
+  </footer>
+</div>
+
+<div class="modal-backdrop" id="modal-rules" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+    <h2 id="rules-title">Como jogar</h2>
+    <p class="sub">Ajude os filhotes a achar uma toca no ninho.</p>
+    <div class="rules">
+      <p>Há <b>49 filhotes</b>: cada um combina uma <b>espécie</b> (pintinho, porquinho, corujinha, axolote, capivara, ouriço, foca) e uma <b>pelagem</b> (7 cores). Juntos, eles cabem num ninho <b>7×7</b>.</p>
+      <ul>
+        <li><b>Começo:</b> um filhote já ocupa a primeira toca. Cada jogador recebe <b>4 filhotes</b>; o resto fica na cestinha.</li>
+        <li><b>Na sua vez:</b> acomode 1 filhote da mão numa toca vazia <b>vizinha</b> (por um lado) de outro filhote.</li>
+        <li><b>Restrição:</b> ele não pode ter a mesma <b>cor</b> nem a mesma <b>espécie</b> de outro filhote na mesma <b>linha</b> ou <b>coluna</b>.</li>
+        <li><b>Pegar ou não:</b> depois de acomodar, você pode pegar 1 filhote da cestinha. Se não pegar, seu limite de mão cai e <b>nunca mais sobe</b>.</li>
+        <li><b>Saídas:</b> quem acomoda o último filhote da mão sai com zero. Quem não tem jogada também sai, levando o que sobrou.</li>
+        <li><b>Fim:</b> vence quem tiver <b>menos filhotes na mão</b>; empate vai para quem jogou por último.</li>
+      </ul>
+      <h3>Atalhos</h3>
+      <ul>
+        <li><b>1…7</b> escolhe o filhote da mão · <b>Esc</b> desmarca · passe o mouse numa toca para ver a prévia.</li>
+      </ul>
+      <p class="credit">
+        <b>Ninho Fofo</b> é um projeto independente, com nome, identidade, textos e desenhos vetoriais originais. Código MIT. Não é adaptação de nenhum jogo comercial.
+      </p>
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-primary" data-close type="button">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-setup" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="setup-title">
+    <h2 id="setup-title">Nova partida</h2>
+    <p class="sub">Jogue sozinho, com amigos no mesmo aparelho ou contra a máquina.</p>
+    <div class="field">
+      <label for="player-count">Número de jogadores</label>
+      <select id="player-count">
+        <option value="1">1 — solo</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Assentos</label>
+      <div id="seat-config"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close type="button">Cancelar</button>
+      <button class="btn btn-primary" id="btn-start" type="button">Começar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-over" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="over-title">
+    <h2 id="over-title">Fim de jogo</h2>
+    <p class="sub" id="over-sub"></p>
+    <ul class="ranking" id="ranking"></ul>
+    <div class="modal-actions">
+      <button class="btn" id="btn-over-setup" type="button">Trocar jogadores</button>
+      <button class="btn btn-primary" id="btn-again" type="button">Jogar de novo</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/pieces.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

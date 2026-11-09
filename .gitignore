@@ -1,0 +1,15 @@
+# dependências e caches (o projeto em si não tem dependências)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# sistema / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# temporários
+*.log
+.env
